@@ -24,11 +24,11 @@
 # print("第二个月总的播放量：", base + incr * 2)
 
 
-# 案例 a = 100 b = 200 c =300,将啊a b c的值分别赋予c a b 
-a,b,c = 100,200,300
-print("原始数据：",a,b,c)
-d = a
-a = c
-c = b
-b = d
-print("交换数据后：",a,b,c)
+# # 案例 a = 100 b = 200 c =300,将啊a b c的值分别赋予c a b 
+# a,b,c = 100,200,300
+# print("原始数据：",a,b,c)
+# d = a
+# a = c
+# c = b
+# b = d
+# print("交换数据后：",a,b,c)
