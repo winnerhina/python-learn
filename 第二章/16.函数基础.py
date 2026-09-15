@@ -21,18 +21,88 @@ def 函数名(被传递的参数---形参):
 """
 -----------------------------------函数的参数与返回值--------------------------
 """
-# 要调用的函数体
-import math
-# 求体积函数
-def V(r,h):
-    v = (1 / 3) * math.pi * pow(r,2) * h
-    return round(v,3)
+# # 要调用的函数体
+# import math
+# # 求体积函数
+# def V(r,h):
+#     v = (1 / 3) * math.pi * pow(r,2) * h
+#     return round(v,3)
 
-# 求表面积函数
-def S(r,h):
-    s = math.pi * r + (r + math.sqrt(pow(h,2) * pow(r,2)))
-    return round(s,3)
+# # 求表面积函数
+# def S(r,h):
+#     s = math.pi * r + (r + math.sqrt(pow(h,2) * pow(r,2)))
+#     return round(s,3)
 
-# 代码主体
-R,H = input("请输入圆锥体的半径和高：").split(",")
-print(f"圆锥体的体积和表面积分别为：{V(float(R),float(H))} \t {S(float(R),float(H))}")
+# # 代码主体
+# R,H = input("请输入圆锥体的半径和高：").split(",")
+# print(f"圆锥体的体积和表面积分别为：{V(float(R),float(H))} \t {S(float(R),float(H))}")
+
+
+"""
+---------------------------------------函数基础函数说明文档-----------------------------------------
+
+函数说明文档：是写在函数开头，用三个引号包裹的字符串，用于解释函数的功能，参数，返回值等信息，
+            方便调用者清除函数的具体作用以及细节
+"""
+
+# # 要调用的函数体
+# import math
+
+# # 求体积函数
+# def V(r,h):
+#     """
+#     该函数根据圆锥体的底面半径与高，求圆锥体的体积
+#     :param r:圆锥体底面半径
+#     :param h:圆锥体的高
+#     :return v:圆锥体的体积
+#     """
+#     v = (1 / 3) * math.pi * pow(r,2) * h
+#     return round(v,3)
+
+# # 求表面积函数
+# def S(r,h):
+#     """
+#     该函数根据圆锥体的底面半径与高，求圆锥体的体积
+#     :param r:圆锥体底面半径
+#     :param h:圆锥体的高
+#     :return s:圆锥体的表面积
+#     """
+#     s = math.pi * r + (r + math.sqrt(pow(h,2) * pow(r,2)))
+#     return round(s,3)
+
+# # 代码主体
+# R,H = input("请输入圆锥体的半径和高：").split(",")
+# print(f"圆锥体的体积和表面积分别为：{V(float(R),float(H))} \t {S(float(R),float(H))}")
+
+
+
+
+"""
+------------------------------------------------函数的嵌套调用------------------------------------
+
+1.函数嵌套指的是在一个函数中，又调用了另一个函数
+2.函数调用遵循栈结构，最后被调用的函数先返回（后进先出）
+"""
+# # 尝试
+
+# def function_a():
+#     print("a...before")
+#     function_b()
+#     print("a...after")
+
+# def function_b():
+#     print("b...before")
+#     function_c()
+#     print("b...after")
+
+# def function_c():
+#     print("c....")
+
+# function_a()
+# print("调用结束！")
+
+
+
+
+
+
