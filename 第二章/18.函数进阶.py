@@ -17,20 +17,222 @@
 """
 
 
-# 关键字global明确告诉python解释器，函数中要使用全局变量，使得可以在函数内部修改全局变量的数值(以下是对比)
-# 未使用global
-num = 100
-def fun1():
-    num =500
-    print(num)
-fun1()
-print(num)
+# # 关键字global明确告诉python解释器，函数中要使用全局变量，使得可以在函数内部修改全局变量的数值(以下是对比)
+# # 未使用global
+# num = 100
+# def fun1():
+#     num =500
+#     print(num)
+# fun1()
+# print(num)
 
-# 使用；global
-num = 100
-def fun2():
-    global num   #先声明
-    num = 666    #后使用
-    print(num)
-fun2()
-print(num)
+# # 使用；global
+# num = 100
+# def fun2():
+#     global num   #先声明
+#     num = 666    #后使用
+#     print(num)
+# fun2()
+# print(num)
+
+
+
+
+
+"""
+----------------------------------------函数传参详解-------------------------------
+
+----------------------------------------传参方式----------------------------------
+
+1.位置参数：调用函数时候，根据函数订一份位置来传递参数
+      要求：调用函数时，参数顺序与定义函时的参数顺序完全一致
+
+2.关键字传参：调用函数时，以函数定义时形参名称作为关键字，以 键 = 值 的形式来传递参数（不要求顺序）
+
+3.如果位置参数与关键字参数混合使用，位置参数在前（有序），关键字参数在后（无序）
+
+4.位置参数应用场景：参数少（不超过三个），且顺序自然
+
+5.关键字参数应用场景：参数多，且容易混淆的场景
+
+
+--------------------------------------默认参数-----------------------------------
+
+1.默认参数也称为缺省参数，用于在定义函数时，为参数提供默认值，调用参数时，可以不传递有默认值的函数。
+
+2.默认参数必须放在没有默认值函数列表的后面，一个函数在定义时，可以设置多个默认参数
+
+3.函数调用时，如果为默认参数传递了值，则会修改默认的参数值，如果没传递，参数，则使用默认值。
+
+
+------------------------------------不定长的参数传递------------------------------------
+
+
+1.介绍：也被叫做可变参数，用于函数定义以及调用时参数个数不确定的场景
+
+2.类型：
+    位置传递
+
+    def calc_date(*args)
+
+
+    # 调用函数
+    print(calc_date(1,2,3,4,5,6,7,8,9,10))
+    # 注意：传递所有匹配的位置参数都会被变量 *args 收集，这些参数会合并封装到一个元组中  args时元组类型
+            （不会封装到关键字参数）
+    
+            
+
+
+    关键字传递
+
+    定义参数时，需要两个星号**
+
+
+    def count_date(*rag,**kwargs):
+    return max(rag),min(rag),round(sum(rag) / len(rag),2)
+
+    shuju = input("请输入一组数据(以,分隔)：").split(",")
+  
+    # ma,mi,avg =  count_date(1,2,3,4,5,6,7,8,9,10,round = 2,count = 0)
+   
+    注意：参数时以 键=值 这种形式传递的，这些参数都会被kwargs接受，并封装为一个字典类型。
+
+
+3.适用场景
+    *不确定-位置参数：适用于处理数量不确定的参数
+    **不确定-关键字参数：适用于处理数量不确定的选项(函数的配置参数，用来指定函数的行为)
+"""
+
+# # 传参方式案例
+
+# def reg_stu(name,age,gender,city):
+#     print(f"注册成功！姓名：{name}，年龄：{age}，住址：{city}")
+#     return name,age,gender,city
+
+# # 位置传参
+# print(reg_stu("二狗",20,"男","狗熊岭"))
+
+# # 关键字传参
+# print(reg_stu(name = "二狗",gender = "男",city = "狗熊岭",age = 20))
+
+# # 位置传参 + 关键字传参
+# print(reg_stu("二狗",20,city = "狗熊岭",gender = "男"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# # 默认参数案例
+
+# def reg_stu(name,age,gender,city = "狗熊岭"):
+#     print(f"注册成功！姓名：{name}，年龄：{age}，住址：{city}")
+#     return name,age,gender,city
+
+# # 默认传参
+# print(reg_stu("二狗",20,"男","狗熊岭山顶"))
+
+# # 正常传参
+# print(reg_stu("二狗",20,"男"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 不定长传参案例
+
+# 位置传参
+# def count_date(*rag):
+#     return max(rag),min(rag),round(sum(rag) / len(rag),2)
+
+# shuju = input("请输入一组数据(以,分隔)：").split(",")
+# # 注意：float(i)返回新值必须接住，不接住就白转了，shuju仍是字符串列表
+# numbers = []
+# for i in shuju:
+#     numbers.append(float(i))
+# # ma,mi,avg =  count_date(1,2,3,4,5,6,7,8,9,10)
+# ma,mi,avg =  count_date(*numbers)   # 调用处加*：把列表拆开逐个传，不加*就是整个列表当一个参数
+# print(f"这组数据的最高值为：{ma}，最低值：{mi}，平均值：{avg}")
+
+
+# 位置传参 + 关键字传参
+def count_date(*rag,**kwargs):
+
+    max_date = max(rag)
+    min_date = min(rag)
+    avg = sum(rag) / len(rag)
+
+    # kwargs的键是字符串！必须写 kwargs["round"]；不带引号的round是内置函数本身→KeyError
+    # 且用get更安全：没传round=时get返回None，用[]取不存在的键会直接崩
+    if kwargs["round"] is not None:
+        avg = round(avg,kwargs["round"])
+
+    if kwargs.get("print"):        # 同理必须加引号，否则get(print)查的是内置print函数→永远None
+        print(f"这组数据的最高值为：{max_date}，最低值：{min_date}，平均值：{avg}")
+
+    return max_date,min_date,avg
+
+
+count_date(1,2,3,4,5,6,7,8,9,10,round = 2,print = True)
+
+# 注意：参数时以 键=值 这种形式传递的，这些参数都会被kwargs接受，并封装为一个字典类型。
+# *不确定-位置参数：适用于处理数量不确定的参数
+# **不确定-关键字参数：适用于处理数量不确定的选项(函数的配置参数，用来指定函数的行为)
+
+
+
+
+
+
+"""
+--------------------------参数的类型-------------------------
+
+1.普通参数：数字，布尔，字符串，列表，元组，集合，字典等
+2.特殊参数：函数(把函数作为参数)
+"""
+
+
+
+# # 案例：简易计算器
+# # 加法
+# def add(x,y):
+#     return x + y
+# # 减法
+# def subtract(x,y):
+#     return x + y
+# # 乘法
+# def multiply(x,y):
+#     return x * y
+# # 除法
+# def divide(x,y):
+#     return x / y
+# # 功能调用
+# def calc(x,y,opper):
+#     return opper(x,y)
+
+# print(calc(66,33,multiply))
+
+
+
+"""
+--------------------------------匿名函数--------------------------------
+"""
