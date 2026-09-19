@@ -22,6 +22,7 @@ from 模块名 import 功能名 as 别名     from random import randint as rint
 from 模块名 import *                  from random import *                 功能名           如：randint(10, 100)
 
 注意：别名是自己起的，目的为了简化模块名。
+      导入的模块和功能一般都放在每个py文件（模块）最上面。
 """
 
 
