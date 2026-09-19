@@ -31,7 +31,7 @@ from utils.my_fun import log_separator4
 from 第二章.utils.my_fun import log_separator1
 from 第二章.utils.my_fun import log_separator2
 from 第二章.utils.my_fun import log_separator3
-from 第二章. utils.my_fun import log_separator4
+from 第二章.utils.my_fun import log_separator4
 log_separator1()
 log_separator2()
 log_separator3()
