@@ -120,28 +120,32 @@ class ShoppingMangement:
             print()
             # 用户输入
             choice = input("请根据系统菜单选择你要使用的功能(1-6):")
+            # 增加基本的异常处理，使得程序不会崩溃
+            try:
             # 功能分支
-            match choice:
-                case "1":
-                    # 添加商品到购物车
-                    self.add_shopping()
-                case "2":
-                    # 修改购物车内的商品
-                    self.update_shopping()
-                case "3":
-                    # 删除购物车内商品
-                    self.del_shopping()
-                case "4":
-                    # 查看购物车内指定商品
-                    self.find_shopping()
-                case "5":
-                    # 查看购物车内所有商品
-                    self.find_all_shopping()
-                case "6":
-                    print("欢迎下次使用～")
-                    break
-                case _:
-                    print("选择功能有误，请根据系统菜单选择你要使用的功能！")
+                match choice:
+                    case "1":
+                        # 添加商品到购物车
+                        self.add_shopping()
+                    case "2":
+                        # 修改购物车内的商品
+                        self.update_shopping()
+                    case "3":
+                        # 删除购物车内商品
+                        self.del_shopping()
+                    case "4":
+                        # 查看购物车内指定商品
+                        self.find_shopping()
+                    case "5":
+                        # 查看购物车内所有商品
+                        self.find_all_shopping()
+                    case "6":
+                        print("欢迎下次使用～")
+                        break
+                    case _:
+                        print("选择功能有误，请根据系统菜单选择你要使用的功能！")
+            except Exception as e:
+                print("系统故障，请联系工作人员！",e)
 
 # 测试运行
 if __name__ == "__main__":

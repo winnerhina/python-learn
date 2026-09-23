@@ -410,24 +410,27 @@ class EduMangement:
 
             # 用户输入选择功能
             chioce = input("请根据系统菜单选择要使用的功能(1-6)：")
-            # 选择分支
-            match chioce:
-                case "1":
-                    self.add_student()
-                case "2":
-                    self.update_student()
-                case "3":
-                    self.del_student()
-                case "4":
-                    self.find_student()
-                case "5":
-                    self.find_all_student()
-                case "6":
-                    print("已退出系统！")
-                    break
-                case _:
-                    print("你选择的功能不存在，请按照系统菜单提示输入要使用的功能！")
-
+            # 增加基本的异常处理，使得程序不会崩溃
+            try:
+                # 选择分支
+                match chioce:
+                    case "1":
+                        self.add_student()
+                    case "2":
+                        self.update_student()
+                    case "3":
+                        self.del_student()
+                    case "4":
+                        self.find_student()
+                    case "5":
+                        self.find_all_student()
+                    case "6":
+                        print("已退出系统！")
+                        break
+                    case _:
+                        print("你选择的功能不存在，请按照系统菜单提示输入要使用的功能！")
+            except Exception as e:
+                print("系统故障，请联系工作人员！",e)
 
 
 
