@@ -12,12 +12,14 @@ import streamlit as st
 st.set_page_config(
     page_title="Ex-stream-ly Cool App",
     page_icon="🧊",
+    # 布局
     layout="wide",
+    # 控制侧边栏的状态
     initial_sidebar_state="expanded",
     menu_items={
         'Get Help': 'https://www.extremelycoolapp.com/help',
         'Report a bug': "https://www.extremelycoolapp.com/bug",
-        'About': "# This is a header. This is an *extremely* cool app!"
+        'About': "# 这是一个streamlit的入门程序"
     }
 )
 
