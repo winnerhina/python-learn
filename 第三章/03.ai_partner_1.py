@@ -14,6 +14,10 @@ st.set_page_config(
     menu_items={}
 )
 
+# 初始化聊天信息
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
+
 # 调用大模型进行交互
 client = OpenAI(api_key=os.environ.get('DEEPSEEK_API_KEY_1'),base_url="https://api.deepseek.com")
 
@@ -26,10 +30,16 @@ st.logo("ai_partner_resources/logo.png")
 # 大标题
 st.title("AI智能伴侣")
 
+# 输出聊天历史
+for message in st.session_state.messages:
+    st.chat_message(message["role"]).write(message["content"])
+
 # 聊天输入框
 input_text = st.chat_input("请输入您要和AI智能伴侣的互动内容：")
 if input_text:
     st.chat_message("user").write(input_text)
+    # 记录用户输入
+    st.session_state.messages.append({"role": "user", "content": input_text})
     print("-------------->调用ai大模型：\n", input_text)
     # 与ai大模型进行交互
     response = client.chat.completions.create(
@@ -46,3 +56,5 @@ if input_text:
     # 输出大模型返回的结果
     print("<-------------大模型返回的结果：\n", response.choices[0].message.content)
     st.chat_message("assistant").write(response.choices[0].message.content)
+    # 记录大模型返回的结果
+    st.session_state.messages.append({"role": "assistant", "content": response.choices[0].message.content})
