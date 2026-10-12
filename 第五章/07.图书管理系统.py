@@ -131,7 +131,7 @@ class LibrarySystem:
 
     # 定义加载图书方法
     def load_books(self):
-        with open("第五章/date/book.json","r",encoding="utf-8") as f:
+        with open("第五章/data/book.json","r",encoding="utf-8") as f:
             book_data = json.load(f)
             for book in book_data:
                 self.books[book["编号"]] = Book(book["编号"],book["标题"],book["作者"],book["数量"])
@@ -139,7 +139,7 @@ class LibrarySystem:
 
     # 定义加载会员方法
     def load_members(self):
-        with open("第五章/date/member.json","r",encoding="utf-8") as f:
+        with open("第五章/data/member.json","r",encoding="utf-8") as f:
             member_data = json.load(f)
             for member in member_data:
                 if member["卡号"].startswith("N"):
