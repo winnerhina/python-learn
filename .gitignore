@@ -27,3 +27,7 @@ Thumbs.db
 
 # 日志
 *.log
+
+# 会话数据文件（运行时生成）
+*.json
+sessions/
