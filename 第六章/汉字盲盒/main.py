@@ -4,14 +4,17 @@ from fastapi.staticfiles import StaticFiles
 import os
 import json
 
+
 import function
+import AI_interaction
+
 
 
 # 创建FastAPI实例
 app = FastAPI(title="汉字盲盒")
 
 # 配置静态文件目录
-# 任何以"/static"开头的请求都从"static"目录中查找对应的文件
+# 任何以"/static"开头的；路由请求都从"static"目录中查找对应的文件
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # 保存会话数据到本地sessions目录
@@ -21,7 +24,7 @@ if not os.path.exists("sessions"):
 # 创建路径操作函数
 @app.get("/")
 def root():
-    print("访问醒目首页")
+    print("访问项目首页")
     return FileResponse("static/index.html")
 
 # 创建新建会话路由
@@ -41,6 +44,18 @@ def create_session() -> function.ApiResponse:
 
     # 3.返回响应数据(封装为对象)
     return function.ApiResponse(code=200, message="会话创建成功", date=session_id)
+
+# 创建聊天路由
+@app.post("/api/chat")
+def chat(request:function.ApiRequest) -> function.ApiResponse:
+    print(f"<-----------------与AI互动：{request.session_id} : {request.message}")
+
+    # 逻辑实现
+    messages = AI_interaction.get_ai_response(request.session_id, request.message)
+
+    # 7.给前端响应数据
+    return function.ApiResponse(code=200, message="聊天成功", date=messages)
+
 
 
 
