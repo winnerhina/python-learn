@@ -8,8 +8,8 @@
  *   POST   /sessions            新建会话
  *   GET    /sessions            获取会话列表
  *   DELETE /sessions/{id}       删除某个会话
+ *   GET    /sessions/{id}       获取某个会话的聊天历史
  *   POST   /api/chat            向聊天发送消息
- *   GET    /api/chat            获取聊天历史消息
  * ===================================================== */
 
 (function () {
@@ -28,7 +28,7 @@
   const btnNewGame = document.getElementById("btn-new-game");
 
   // ---- 当前会话状态（仅保存"正在查看哪个会话"，数据本体在后端） ----
-  let sessions = [];        // [{ id, title, active }]
+  let sessions = [];        // 会话ID字符串数组（后端返回，最新在前）
   let currentSessionId = null;
 
   /**
@@ -84,7 +84,7 @@
 
   const messagesApi = {
     async send(id, message) { return request("POST", "/api/chat", { session_id: id, message }); },
-    async list(id)          { return request("GET", "/api/chat"); },
+    async list(id)          { return request("GET", `/api/sessions/${id}`); },
   };
 
   /**
@@ -123,17 +123,30 @@
     updateChatEmpty();
   }
 
-  // ---- 历史记录渲染（以数据驱动，数据来自后端 GET /sessions） ----
+  /**
+   * 渲染某个会话的全部历史消息到聊天区
+   * @param {Array} msgs 后端返回的消息数组 [{role, content}, ...]
+   */
+  function renderMessages(msgs) {
+    chatMessages.innerHTML = "";
+    (msgs || []).forEach((m) => {
+      const who = m.role === "user" ? "user" : "ai";
+      appendMessage(m.content, who);
+    });
+    updateChatEmpty();
+  }
+
+  // ---- 历史记录渲染（sessions 为后端返回的会话ID字符串数组，最新在前） ----
   function renderHistory() {
     historyList.innerHTML = "";
-    sessions.forEach((s) => {
+    sessions.forEach((sid) => {
       const li = document.createElement("li");
-      li.className = "history-item" + (s.active ? " active" : "");
-      li.dataset.id = s.id;
+      li.className = "history-item" + (sid === currentSessionId ? " active" : "");
+      li.dataset.id = sid;
 
       const span = document.createElement("span");
       span.className = "timestamp";
-      span.textContent = s.title;
+      span.textContent = sid;
 
       const btnDel = document.createElement("button");
       btnDel.className = "btn-delete";
@@ -141,32 +154,30 @@
       btnDel.title = "删除会话";
       btnDel.addEventListener("click", (e) => {
         e.stopPropagation();
-        deleteSession(s.id);
+        deleteSession(sid);
       });
 
       li.appendChild(span);
       li.appendChild(btnDel);
 
-      li.addEventListener("click", () => selectSession(s.id));
+      li.addEventListener("click", () => selectSession(sid));
 
       historyList.appendChild(li);
     });
   }
 
   /**
-   * 加载历史会话列表：向后端发起 GET /sessions
-   * 成功后重建本地列表并渲染，可指定选中某个会话。
+   * 加载历史会话列表：只保留请求接口
+   * GET /api/sessions → data 为会话ID字符串数组（最新在前），
+   * 列表数据与排序均由后端负责，前端仅渲染，当前会话取第一条。
    */
-  async function loadSessions(focusId) {
+  async function loadSessions() {
     try {
       sessions = await sessionsApi.list();
-      if (focusId) {
-        sessions.forEach((s) => (s.active = s.id === focusId));
-        currentSessionId = focusId;
-      } else {
-        currentSessionId = sessions.length ? sessions[0].id : null;
-        sessions.forEach((s, i) => (s.active = i === 0));
-      }
+      currentSessionId = sessions.length ? sessions[0] : null;
+      sessionName.textContent = currentSessionId
+        ? "会话名称：" + currentSessionId
+        : "会话名称：--";
       renderHistory();
     } catch (err) {
       console.error("加载会话列表失败：", err);
@@ -174,23 +185,13 @@
     }
   }
 
-  // ---- 新建游戏（走后端 POST /sessions） ----
+  // ---- 新建游戏（只保留请求接口：走后端 POST /sessions，创建后重新拉取列表） ----
   async function newGame() {
     try {
-      // request() 已解包，直接拿到 date：可能是一个字符串(session_id)或对象
-      const data = await sessionsApi.create();
-      const id = typeof data === "string" ? data : data.session_id || data.id;
-      const title = typeof data === "string" ? data : data.title || id;
-
-      // 本地插入并选中新会话（列表数据仍以本地为准，等 GET 接口就绪后可由 loadSessions 统一）
-      sessions.forEach((s) => (s.active = false));
-      sessions.unshift({ id, title, active: true });
-      currentSessionId = id;
-
-      sessionName.textContent = "会话名称：" + title;
+      await sessionsApi.create();
+      await loadSessions();
       chatMessages.innerHTML = "";
       updateChatEmpty();
-      renderHistory();
       messageInput.focus();
     } catch (err) {
       console.error("新建会话失败：", err);
@@ -198,39 +199,36 @@
     }
   }
 
-  // ---- 切换会话（前端仅做展示切换；消息内容可按需加载 GET /sessions/{id}/messages） ----
+  // ---- 切换会话（点击聊天记录 → 向后端请求该会话的历史消息） ----
   async function selectSession(id) {
     currentSessionId = id;
-    sessions.forEach((s) => (s.active = s.id === id));
     renderHistory();
-    const s = sessions.find((x) => x.id === id);
-    sessionName.textContent = s ? "会话名称：" + s.title : "会话名称：--";
+    sessionName.textContent = "会话名称：" + id;
 
-    // 后端接入点：可加载该会话历史消息
-    // const msgs = await messagesApi.list(id);
-    // renderMessages(msgs);
-    updateChatEmpty();
+    // GET /api/sessions/{id} → data 为 {current_session, messages: [{role, content}]}
+    try {
+      const data = await messagesApi.list(id);
+      renderMessages(data.messages || data);
+    } catch (err) {
+      console.error("加载会话历史失败：", err);
+      showError("加载会话历史失败，请确认后端接口运行正常。");
+      chatMessages.innerHTML = "";
+      updateChatEmpty();
+    }
   }
 
-  // ---- 删除会话（走后端 DELETE /sessions/{id}） ----
+  // ---- 删除会话（走后端 DELETE /sessions/{id}，删除后重新拉取列表） ----
   async function deleteSession(id) {
+    const wasCurrent = id === currentSessionId;
     try {
       await sessionsApi.remove(id);                  // 由后端删除
-      const idx = sessions.findIndex((x) => x.id === id);
-      if (idx !== -1) sessions.splice(idx, 1);
-
-      if (currentSessionId === id) {
-        currentSessionId = sessions.length ? sessions[0].id : null;
-        sessions.forEach((s, i) => (s.active = i === 0));
-        if (currentSessionId) {
-          sessionName.textContent = "会话名称：" + sessions[0].title;
-        } else {
-          chatMessages.innerHTML = "";
-          sessionName.textContent = "会话名称：--";
-        }
+      await loadSessions();                          // 重新拉取列表，自动选中第一条
+      if (wasCurrent) {
+        // 删的是当前会话：清空聊天区，并加载新当前会话的历史消息
+        chatMessages.innerHTML = "";
+        updateChatEmpty();
+        if (currentSessionId) await selectSession(currentSessionId);
       }
-      renderHistory();
-      updateChatEmpty();
     } catch (err) {
       console.error("删除会话失败：", err);
       showError("删除会话失败，请确认后端接口运行正常。");
