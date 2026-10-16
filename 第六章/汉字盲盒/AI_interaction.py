@@ -1,6 +1,7 @@
 import function
 import os
 from openai import OpenAI
+import logging
 
 # 系统提示词
 
@@ -35,6 +36,12 @@ SYSTEM_PROMPT = """
 请严格按以上规则回复，优先保证谜语的随机性和多样性。
 """
 
+# 配置日志记录
+logging.basicConfig(
+    level=logging.INFO, 
+    format="%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"
+    )
+
 # 调用大模型进行交互
 client = OpenAI(api_key=os.environ.get('DEEPSEEK_API_KEY_1'),base_url="https://api.deepseek.com")
 
@@ -65,14 +72,14 @@ def get_ai_response(session_id: str, message: str) -> list:
         extra_body={"thinking": {"type": "enabled"}}
     )
     
-    # 4.获取相应数据
+    # 4.获取响应数据
     new_message = response.choices[0].message.content
-    print(f"------------------>AI大模型的响应：{new_message}")
+    logging.info(f"------------------>AI大模型的响应：{new_message}")
 
     # 5.更新消息列表中信息
     messages.pop(0)
     session_data["messages"].append({"role": "assistant", "content": new_message})
-    print(f"更新后的消息列表：{session_data['messages']}")
+    logging.info(f"更新后的消息列表：{session_data['messages']}")
 
     # 6.保存会话数据到sessions目录
     function.save_session_data(session_id, session_data)
