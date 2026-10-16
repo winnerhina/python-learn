@@ -11,7 +11,7 @@ class ApiResponse(pydantic.BaseModel):
     message: str
     date: Any
 
-# 封装聊天请求数据与响应数据
+# 封装聊天请求数据并转换为对象
 class ApiRequest(pydantic.BaseModel):
     session_id: str
     message: str
