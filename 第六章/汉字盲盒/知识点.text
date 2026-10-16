@@ -1,0 +1,351 @@
+1. 接口规范----Restful
+
+    1-2. Restful指的是遵循REST架构风格的API接口服务，REST（REpresentational State Transfer）表述性状态转换，它是一种软件架构风格。
+
+    1-3. URL设计原则：用URL定位资源，用HTTP动词描述操作。特点：简洁、规范、优雅。
+
+    1-4. 四大HTTP方法：
+    - GET：查询（如 http://localhost:8000/users/1 → 查询id为1的用户）
+    - DELETE：删除（如 http://localhost:8000/users/1 → 删除id为1的用户）
+    - POST：新增（如 http://localhost:8000/users → 新增用户）
+    - PUT：修改（如 http://localhost:8000/users → 修改用户）
+
+    1-5. 命名规范：描述功能模块通常使用复数形式（加s），如 users、books、items。
+
+    1-6. 注意：REST是风格，是约定方式，约定不是规定，可以打破。
+
+2. FastAPI
+    2-1. FastAPI内的FileResponse与starllette里面的FileResponse关系：
+         FastAPI 本身构建在 Starlette 之上，里面集成了starllette
+
+    2-2. 挂载静态文件 StaticFiles：
+        代码：
+            app.mount("/static", StaticFiles(directory="static"), name="static")
+        总结:任何以"/static"开头的请求都从"static"目录中查找对应的文件
+
+        理解（三个参数各管一件事）：
+            · 第一个 "/static"：这是网络上的入口地址（URL前缀）。
+            用户访问网址时，凡是 "http://localhost:8000/static/xxx" 这类请求，都交给这里处理。
+            · 第二个 directory="static"：这是电脑硬盘上的真实文件夹。
+            它里面有哪个文件，就能通过上面的网址访问到哪个文件（子文件夹也算）。
+            · 第三个 name="static"：只是给这个挂载起个内部名字，给FastAPI自己用，不用管。
+        一句话总结：
+            "/static" 是"门牌号（入口）"，directory="static" 是"放文件的仓库（真正内容）"。
+            只是把仓库里的文件藏到了门牌号后面，用户通过门牌号即可拿到仓库里的文件。
+        注意事项：
+            · 三个参数不一定都叫 static，可以改，只要互相能对上就行。
+            · 本地目录里没有的文件，通过网址也访问不到（会 404）。
+
+    2-3. pydantic + BaseModel（收请求 / 发响应，共用同一套知识点）
+        什么是pydantic：一个数据校验库，用"类 + 类型注解"来定义数据的结构。
+            看到 BaseModel 就知道是 pydantic 的模型（FastAPI 深度集成了 pydantic）。
+
+        BaseModel 的核心能力（双向转换）：
+            · 把 JSON 转成对象（接收前端传来的数据）
+            · 把对象转成 JSON（返回给前端的数据）
+            驱动这套转换的，是你写在类里的"字段类型"；自动调用它的是 FastAPI。
+
+        通用套路（三步，响应和请求都用它）：
+            ① 自己定义一个类，继承 pydantic.BaseModel，写出字段和类型
+            ② 写一个 pydantic.BaseModel 的子类对象
+            ③ 在路由函数里用类型注解把它"挂"上去，FastAPI 自动处理
+
+        【方向一】封装"响应"数据（发给前端）—— 对应 function.py 中的 ApiResponse
+            第①步 · 定义响应模型类（在 function.py 中）
+            代码：
+                import pydantic
+                from typing import Any
+
+                class ApiResponse(pydantic.BaseModel):
+                    code: int        # 状态码，必须是整数
+                    message: str     # 提示信息，必须是字符串
+                    date: Any        # 携带的数据，Any 表示任意类型（字符串/字典都行）
+
+            第②步 · 创建模型对象并返回
+            代码：
+                return function.ApiResponse(code=200, message="会话创建成功", date=session_id)
+            理解：
+                · 像调用普通函数一样，按字段名传参：code=200、message="..."、date=...。
+                · date 是 Any 类型，传字符串（session_id）或字典（session_data）都行。
+
+            第③步 · 在路由函数上标注返回类型（在 main.py 中）
+            代码：
+                @app.post("/api/sessions")
+                def create_session() -> function.ApiResponse:
+            理解：
+                · 箭头 -> function.ApiResponse 告诉 FastAPI：这个接口返回 ApiResponse 模型，
+                它会自动把对象转成 JSON 返回，不用手动写 json。
+
+        【方向二】接收"请求"数据（前端传来的 body）—— 对应 /api/chat
+        场景：前端聊天时，把"这是哪个会话"和"用户说了什么"传给服务端，
+        以 JSON 放在 POST 请求的请求体（body）里（DevTools 的 Payload 能看到）：
+            {"session_id": "2026-04-21_17-44-24", "message": "你好"}
+        含义：
+            · session_id：会话标识（这条消息属于哪个会话）。
+            · message：用户输入的消息内容。
+
+        第①步 · 定义请求模型类（自己定义，继承 BaseModel）
+        代码：
+            class ChatRequest(BaseModel):
+                session_id: str
+                message: str
+        理解：
+            · 这就是一张"接货清单"：告诉 FastAPI 我期望收到一个对象，含两个字符串字段。
+
+        第②步 · 在路由函数参数上声明这个模型
+        代码：
+            @app.post("/api/chat")
+            def chat(request: ChatRequest):
+                # 进来后就能直接用 request.session_id、request.message
+                pass
+        理解：
+            · 参数写"request: ChatRequest"，FastAPI 会自动：
+                ① 读取请求体里的 JSON
+                ② 套进 ChatRequest 对象塞进参数
+                ③ 字段缺失/类型不对时自动返回 422（不用自己写校验）
+            · 注意：后端 /api/chat 要和前端 POST /api/chat 对得上。
+
+        整体流程（通俗图）：
+            浏览器  --JSON(body)-->  FastAPI  --自动校验-->  ChatRequest对象 --> 函数内使用
+               传递数据                   收快递+验货                 拿到能用
+
+        【两种方向对比】
+        ┌──────────┬──────────────────┬──────────────────────────┐
+        │          │ 接收请求（方向二）│ 返回响应（方向一）         │
+        │ 数据流向 │ JSON → 对象      │ 对象 → JSON              │
+        │ 用的类   │ ChatRequest      │ ApiResponse             │
+        │ 挂载方式 │ 函数参数类型标注  │ 函数返回值类型标注         │
+        │ 写法     │ def chat(req: ...)│ def create() -> ...     │
+        └──────────┴──────────────────┴──────────────────────────┘
+
+        好处总结：
+            · 不用自己解析 JSON：请求直接用 request.session_id，响应自动转 JSON。
+            · 自带类型校验：字段错了自动报错（请求 422、响应报类型错）。
+            · 统一格式、结构一致：请求和响应都靠同一个 BaseModel，省心。
+
+    2-4. 捕获全局异常（统一异常处理）：@app.exception_handler()
+        问题：项目功能多了以后，每个接口都可能出错。如果不处理，错误会以
+        默认格式返回（甚至直接 500 空白），前端不好判断、排查也麻烦。
+        解决：FastAPI 提供统一的异常处理方案——注册一个"全局异常处理器"，
+        不管哪个接口抛异常，都会先经过它，统一转成规定格式返回。
+
+        代码：
+            # 统一处理异常信息
+            @app.exception_handler(Exception)
+            def handle_exception(request: Request, exc: Exception):
+                logging.error(f"处理异常，请求路径：{request.url}, 异常信息：{exc}")
+                return JSONResponse(content={"code": 500, "message": "服务器内部错误"})
+
+        理解（官方文档说明的通俗解释）：
+            · @app.exception_handler(Exception)：注册一个"异常处理器"。
+              Exception 是所有异常的"总父类"，注册它等于"兜底捕获一切异常"。
+              需要先导入：from fastapi import Request、
+              from fastapi.responses import JSONResponse。
+            · def handle_exception(request: Request, exc: Exception)：
+              处理器固定接收两个参数——
+              request：本次出错的请求对象（能拿到 URL 等上下文信息）；
+              exc：被捕获到的异常对象（能拿到具体错误内容）。
+            · logging.error(...)：把异常记进日志，方便事后排查。
+            · JSONResponse(...)：把错误包装成 JSON 返回给前端，
+              前端收到的就是统一格式 {"code": 500, "message": "服务器内部错误"}。
+
+        效果（架构图）：
+            浏览器 ──请求──▶ [接口1][接口2][接口3] ──出错──▶ [异常处理器] ──▶ 统一JSON错误响应
+            任何一个接口抛异常，都会被集中到这里统一处理，
+            前端拿到的错误格式始终一致，不用为每个接口单独写 try/except。
+
+        注意：
+            · 注册 Exception 属于"兜底"方案，能接住所有没预料到的异常；
+            · 更精细的做法是按异常类型分别注册，例如
+              @app.exception_handler(RequestValidationError) 处理参数校验错误(422)、
+              @app.exception_handler(HTTPException) 处理 HTTP 错误(4xx/5xx)，
+              而 Exception 只兜底剩下的未知错误。
+    
+3. 文件操作
+    本项目中用到的文件操作：把会话数据保存成 JSON 文件（存放在 sessions 目录），以及启动时自动创建该目录。
+
+    3-1. 判断目录是否存在：os.path.exists()
+        代码：
+            if not os.path.exists("sessions"):
+        作用：检查当前目录下有没有名为 sessions 的文件夹。
+            返回 True（存在）/ False（不存在）。
+
+    3-2. 创建目录：os.makedirs()
+        代码：
+            os.makedirs("sessions")
+        作用：创建 sessions 文件夹。
+            注意：它和 os.mkdir 的区别是，makedirs 可以一次性创建多级目录（如 a/b/c）。
+
+    3-3. 遍历目录下的文件：os.listdir()
+        代码：
+            session_files = os.listdir("sessions")
+        作用：列出指定目录下的所有文件名和子目录名，返回一个字符串列表。
+            理解：
+            · 参数是"目录路径"，如 "sessions" 表示当前目录下的 sessions 文件夹。
+            · 返回的是字符串列表，例如：
+                ["2026-04-12_13-32-52.json", "2026-04-12_13-20-15.json", ...]
+            · 注意：返回的只是"名字"，不带完整路径；且列表顺序不保证，
+            需要排序时要用 os.path.getmtime() 配合 sort 按修改时间排。
+
+    3-4. 打开文件：open()（配合 with 使用）
+        代码：
+            with open(f"sessions/{session_id}.json", "w") as f:
+        作用：以写模式（"w"）打开 sessions 目录下的一个 .json 文件，f 就是文件对象。
+            理解：
+            · "w" 表示写模式：文件不存在则新建，存在则清空内容重写（覆盖）。
+            · 文件名里用了 f-string，把 session_id（时间戳）拼进文件名。
+            · with ... as f：用完后自动关闭文件，不用手动 f.close()。
+            · 特别注意：Windows 文件名不能包含冒号（:），所以时间格式用的是
+            2026-10-14_19-19-43 而不是 19:19:43。
+
+    3-5. 把数据写入 JSON 文件：json.dump()
+        代码：
+            json.dump(session_data, f, ensure_ascii=False, indent=4)
+        作用：把 session_data（字典）序列化成 JSON 文本，写入文件对象 f。
+            理解三个参数：
+            · session_data：要写入的数据（字典/列表）。
+            · f：写到哪里，必须是 open() 打开的"文件对象"（容易漏，漏了会报 TypeError）。
+            · ensure_ascii=False：中文按原文保存，而不是转成 \uXXXX 转义字符。
+            · indent=4：写入时缩进 4 个空格，文件好看、方便阅读。
+
+    3-6. 数据与 JSON 字符串互转：json.dumps() 和 json.loads()
+        说明：这两个不带文件参数，只在"内存"里转字符串，不碰文件。
+        项目中存文件用 3-5 的 json.dump()（带文件对象 f），
+        而 dumps/loads 常用于接口传参、打印调试、解析接口返回的 JSON 文本。
+
+        【json.dumps() —— 把数据转成 JSON 字符串】
+        代码：
+            text = json.dumps(session_data, ensure_ascii=False)
+        作用：把字典/列表转成 JSON 格式的【字符串】（s 表示 string）。
+            理解：
+            · 结果是一个字符串，可以 print 出来查看，也可以放进请求体发给接口。
+            · 参数与 json.dump() 相同：ensure_ascii=False 中文按原文保存，
+            indent=4 自动缩进，方便阅读。
+
+        【json.loads() —— 把 JSON 字符串转回数据】
+        代码：
+            data = json.loads(text)
+        作用：把 JSON 格式的【字符串】还原成字典/列表（s 表示 string）。
+            理解：
+            · 是 json.dumps() 的逆操作，常用于解析接口返回的 JSON 文本。
+            · 传入的必须是合法 JSON 字符串，否则会报 json.JSONDecodeError 异常。
+
+        3-7. 对应关系总结（配合 json 模块使用）：
+            · json.dump(数据, 文件对象)：把数据【写入】文件（本项目用这个）。
+            · json.dumps(数据)：把数据转成 JSON【字符串】（s 表示 string）。
+            · json.load(文件对象)：从文件【读取】JSON 数据（以后读会话要用）。
+            · json.loads(字符串)：把 JSON【字符串】转回数据（s 表示 string）。
+
+4. 日志记录
+    为了能够灵活控制项目中的日志输出，我们可以通过官方提供的logging模块来输出日志，具体做法如下：
+
+    4-1. 导入并配置日志系统：logging.basicConfig()
+        代码：
+            import logging
+            logging.basicConfig(
+                level=logging.INFO,
+                format="%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"
+            )
+        作用：一次性配置全局日志系统（日志级别 + 输出格式）。
+            理解：
+            · import logging：Python 内置模块，无需安装。
+            · level=logging.INFO：设置日志级别"阈值"，低于它的日志（如 DEBUG）不输出。
+            · format="..."：定义日志输出模板，常用占位符有：
+                %(asctime)s     时间戳，如 2026-10-16 10:30:45,123
+                %(levelname)s   日志级别名称，如 INFO
+                %(filename)s    来源文件名，如 main.py
+                %(lineno)d      代码行号
+                %(message)s     日志消息本身
+
+    4-2. 在代码中打日志
+        代码：
+            @app.get("/")
+            def root():
+                logging.info("访问首页~")
+                return FileResponse("static/index.html")
+        输出效果（访问首页时控制台打印）：
+            2026-10-16 10:30:45,123 - INFO - [main.py:15] - 访问首页~
+
+    4-3. 日志级别（由低到高）
+        日志级别就是给日志信息贴上的"重要性标签"，Python 标准级别：
+            DEBUG < INFO < WARNING < ERROR < CRITICAL
+            · DEBUG（10）    调试细节，开发排查用
+            · INFO（20）     常规流程确认信息（本项目用它）
+            · WARNING（30）  潜在问题，程序还能跑
+            · ERROR（40）    发生了错误，但程序不退出
+            · CRITICAL（50） 致命错误，程序可能崩
+            注意：
+            · 图片中写的 FATAL 不是 Python 的标准级别，Python 里叫 CRITICAL。
+            · basicConfig 里的 level 就是过滤阈值：level=logging.INFO 时，
+              DEBUG 被过滤，INFO 及以上的才输出。
+
+    4-4. 创建专属 logger（官方推荐做法）
+        作用：直接用 logging.xxx() 打的是"根 logger"。项目中官方推荐每个模块
+        用 logging.getLogger(__name__) 建自己的 logger，便于按模块控制级别、
+        在日志里区分消息来自哪个模块。
+        代码：
+            logger = logging.getLogger(__name__)
+            logger.info("访问首页~")
+
+    4-5. 把日志写入文件
+        代码：
+            logging.basicConfig(
+                filename="app.log",          # 加了 filename，日志写进文件
+                level=logging.INFO,
+                format="%(asctime)s - %(levelname)s - %(message)s",
+                encoding="utf-8"             # 中文日志必须指定，否则可能乱码
+            )
+        理解：加了 filename 后，日志不再打印到控制台，而是追加写入文件。
+
+    4-6. 同时输出控制台和文件（多个 Handler）
+        作用：basicConfig 只能简单指定一处输出；要"控制台 + 文件"同时输出，
+        需要自己挂两个 Handler（官方推荐的方式）。
+        代码：
+            logger = logging.getLogger(__name__)
+            logger.setLevel(logging.INFO)
+
+            console = logging.StreamHandler()                          # 输出到控制台
+            file = logging.FileHandler("app.log", encoding="utf-8")    # 输出到文件
+
+            formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+            console.setFormatter(formatter)
+            file.setFormatter(formatter)
+
+            logger.addHandler(console)
+            logger.addHandler(file)
+
+            logger.info("访问首页~")
+
+    4-7. 自定义时间格式：datefmt
+        代码：
+            logging.basicConfig(
+                level=logging.INFO,
+                format="%(asctime)s - %(levelname)s - %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S"      # 去掉默认的 ,123 毫秒
+            )
+        输出效果：
+            2026-10-16 10:30:45 - INFO - 访问首页~
+
+    4-8. 记录异常堆栈：logging.exception()
+        作用：在 except 里用 logging.exception(...)，会自动在日志里带上
+        完整的异常堆栈信息，排查错误特别好用（等价于 error + exc_info=True）。
+        代码：
+            try:
+                1 / 0
+            except ZeroDivisionError:
+                logging.exception("除法出错了")    # 日志里带完整堆栈
+
+    4-9. 日志消息用占位符传参
+        作用：日志消息别用 f-string 拼，用 %s 占位符传参——当日志不输出时
+        就不用做字符串拼接，性能更好、也更规范。
+        代码：
+            logging.info("用户 %s 发来消息：%s", session_id, message)
+
+    4-10. 常用格式占位符速查
+            %(asctime)s     时间
+            %(levelname)s   级别名称
+            %(name)s        logger 名称
+            %(filename)s    文件名
+            %(funcName)s    函数名
+            %(lineno)d      行号
+            %(message)s     日志消息
