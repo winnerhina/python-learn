@@ -349,3 +349,106 @@
             %(funcName)s    函数名
             %(lineno)d      行号
             %(message)s     日志消息
+
+    4-11. 【重要坑】日志输出到了 stderr，有的控制台看不到
+        现象：print() 能看到，但 logging.info(...) 死活看不到。
+        原因：
+            · print() 默认输出到 stdout（标准输出）。
+            · logging 默认输出到 stderr（标准错误）。
+            · 有些控制台/预览面板（如 trae-preview）只显示 stdout，
+              不显示 stderr 的内容。
+            · 所以应用日志其实是"输出了"，只是你盯的控制台看不到。
+        判断方法（print 定位法）：
+            · 在 logging.info 旁边加一句 print("=== 测试 ===")。
+            · print 有输出 → 路由被调用了 → 是输出通道问题，不是代码问题。
+            · print 没输出 → 请求根本没到后端，去查前端。
+        解决：把日志改走 stdout，或同时写文件（见 4-12）。
+
+    4-12. basicConfig 的 handlers 参数：同时输出控制台 + 文件
+        作用：basicConfig 除了 filename 参数，还支持 handlers 列表，
+             一次指定多个输出目标（比 4-6 手写 Handler 更简洁）。
+        代码：
+            import sys
+            logging.basicConfig(
+                level=logging.INFO,
+                format="%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
+                handlers=[
+                    logging.StreamHandler(sys.stdout),  # 控制台：走 stdout，预览面板可见
+                    logging.FileHandler("app.log", encoding="utf-8")  # 文件：持久保存
+                ]
+            )
+        理解：
+            · StreamHandler(sys.stdout)：日志打到标准输出，大多数控制台可见。
+            · FileHandler("app.log")：同时追加写入 app.log 文件，可随时翻看历史。
+            · 中文日志必须 encoding="utf-8"，否则乱码。
+
+5. uvicorn（ASGI 服务器）
+    5-1. uvicorn 是什么
+        作用：一个 ASGI 服务器，负责"跑"FastAPI 应用。
+        理解：
+            · FastAPI 只负责"接收请求 → 处理 → 返回响应"的逻辑，本身不会监听端口、接收网络请求。
+            · uvicorn 负责把网络请求接进来，转交给 FastAPI 处理，再把结果发回去。
+            · 类比：FastAPI 是"客服大脑"，uvicorn 是"接电话的接线员"。
+
+    5-2. 在代码中启动：uvicorn.run()
+        代码（写在 main.py 底部）：
+            if __name__ == "__main__":
+                import uvicorn
+                uvicorn.run(app, host="0.0.0.0", port=8000)
+        理解：
+            · __name__ == "__main__"：只有"直接运行 main.py"时才启动；
+              被别的文件 import 时不会误启动。
+            · app：FastAPI 实例（main.py 里创建的 app = FastAPI(...)）。
+            · host="0.0.0.0"：监听所有网卡地址，局域网内其他设备也能访问；
+              只想本机访问可写 host="127.0.0.1"。
+            · port=8000：服务端口，浏览器访问 http://127.0.0.1:8000。
+
+    5-3. 命令行启动：uvicorn main:app --reload
+        代码：
+            uvicorn main:app --reload
+        理解：
+            · main:app = "文件:实例名"，即 main.py 里的 app 变量。
+            · --reload：监听代码变化，保存文件后自动重启服务（开发神器）。
+              注意：--reload 只在命令行启动时有效；且热重载不代表所有资源
+              都刷新，运行中改代码仍建议确认服务已重载。
+            · 命令行方式和代码 uvicorn.run() 二选一即可。
+
+    5-4. uvicorn.run() 常用参数
+            · host：监听地址（默认 127.0.0.1）。
+            · port：端口（默认 8000）。
+            · log_level：日志级别，如 "info"、"warning"（控制 uvicorn 自身日志的详细程度）。
+            · log_config：日志配置字典；传 None 表示"不用 uvicorn 的日志配置"。
+
+    5-5. 【重要坑】日志不输出：uvicorn 会接管日志配置
+        现象：代码里写了 logging.info(...)，但控制台死活不打印。
+        原因：uvicorn.run() 启动时，会用自己内置的日志配置覆盖
+             import 阶段设置的 logging.basicConfig，导致应用日志
+             （走根 logger）失去输出目标。
+        解决：让 uvicorn 不要接管日志配置。
+        代码：
+            if __name__ == "__main__":
+                import uvicorn
+                # log_config=None：不让 uvicorn 接管日志配置，
+                # 否则会覆盖 basicConfig 的设置，导致 logging.info 不输出
+                uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info", log_config=None)
+        理解：
+            · log_config=None = "日志配置我自己管，你别动"，
+              上面的 logging.basicConfig 才真正生效。
+            · 前提：必须用"代码启动"（python main.py）。如果用命令行
+              uvicorn main:app 启动，命令行自带的日志配置不受这个参数影响。
+        更规范的替代（官方推荐）：每个模块建专属 logger（见 4-4）：
+            logger = logging.getLogger(__name__)
+            logger.info("访问首页~")
+            这样即使根 logger 被接管，专属 logger 仍可独立配置输出。
+
+    5-6. 修改代码后必须重启服务
+        注意：uvicorn 默认不会自动加载新代码（除非加了 --reload），
+             修改后端代码后必须重启服务才生效，否则请求打到旧版本代码上，
+             出现"明明改了却没效果"的假象。
+
+    5-7. 【坑】工作目录问题：static 404
+        现象：访问页面样式/JS 全部 404（挂载的 /static 找不到）。
+        原因：static 用的是相对路径，从项目根目录运行子目录下的 main.py 时，
+             相对路径指向了错误位置。
+        解决：启动前先 cd 进入 main.py 所在目录，或在 PyCharm 的 launch.json
+             里把 cwd 设为 "${fileDirname}"（脚本所在目录）。
