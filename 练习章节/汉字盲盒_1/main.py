@@ -12,12 +12,15 @@ import AI_interaction
 
 
 # 配置日志记录：同时输出到控制台(stdout)和 app.log 文件
+# 作用：logging.info() 打出来的日志，往哪写、写多详细、长什么样，都由这里统一决定
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.INFO,  # level：只记录 INFO 及以上级别的日志（INFO/WARNING/ERROR），DEBUG 太啰嗦不记录
     format="%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
+    # format：日志的排版模板。依次是 时间 - 级别 - 哪个文件哪一行 - 日志内容，方便定位是哪个接口打的
     handlers=[
-        logging.StreamHandler(sys.stdout),  # 输出到 stdout，预览控制台能看到（print 同款通道）
-        logging.FileHandler("app.log", encoding="utf-8")  # 同时写入 app.log 文件
+        # handlers：日志的"出口"列表，可以同时挂多个，每挂一个日志就多写一份
+        logging.StreamHandler(sys.stdout),  # 出口1：写入标准输出 stdout（终端/预览控制台，和 print 同一通道）
+        logging.FileHandler("app.log", encoding="utf-8")  # 出口2：同时写入 app.log 文件，方便事后翻查；utf-8 防止中文乱码
     ]
 )
 
